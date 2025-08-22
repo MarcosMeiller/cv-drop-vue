@@ -8,7 +8,11 @@ import { AuthPage } from "@/components/auth/AuthPage";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import DeveloperProfile from "./pages/DeveloperProfile";
+import CompanyProfile from "./pages/CompanyProfile";
 import BrowseDevelopers from "./pages/BrowseDevelopers";
+import BrowseCompanies from "./pages/BrowseCompanies";
+import PublicDeveloperProfile from "./pages/PublicDeveloperProfile";
+import PublicCompanyProfile from "./pages/PublicCompanyProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,7 +38,11 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="developer/profile" element={<DeveloperProfile />} />
+        <Route path="company/profile" element={<CompanyProfile />} />
         <Route path="developers" element={<BrowseDevelopers />} />
+        <Route path="companies" element={<BrowseCompanies />} />
+        <Route path="developer/:id" element={<PublicDeveloperProfile />} />
+        <Route path="company/:id" element={<PublicCompanyProfile />} />
         <Route path="public/developers" element={<BrowseDevelopers />} />
       </Route>
       <Route path="*" element={<NotFound />} />

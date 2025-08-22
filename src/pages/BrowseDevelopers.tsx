@@ -14,6 +14,7 @@ import {
   Filter,
   Eye
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase, DeveloperProfile } from '@/lib/supabase'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -259,9 +260,11 @@ export default function BrowseDevelopers() {
                   )}
                 </div>
 
-                <Button className="w-full">
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Profile
+                <Button className="w-full" asChild>
+                  <Link to={`/developer/${developer.id}`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Profile
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
