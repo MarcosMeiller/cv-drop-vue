@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { X, Plus, Code2, Building2 } from 'lucide-react'
+import { X, Plus, Code2, Building2, Upload, FileText, Edit, Eye } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { UserRole } from '@/lib/supabase'
+import { DeveloperProfile, CompanyProfile, UserRole, supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import TalentDashboard from '@/components/dashboards/TalentDashboard'
 
 const developerSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -40,6 +40,10 @@ export const ProfileSetup = () => {
   const [skills, setSkills] = useState<string[]>([])
   const [newSkill, setNewSkill] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cvFile, setCvFile] = useState<File | null>(null)
+  const [cvUploading, setCvUploading] = useState(false)
+  const [existingProfile, setExistingProfile] = useState<DeveloperProfile | CompanyProfile | null>(null)
+  const [showEditForm, setShowEditForm] = useState(false)
   const { user, createUserProfile } = useAuth()
   const { toast } = useToast()
 
@@ -58,6 +62,58 @@ export const ProfileSetup = () => {
     },
   })
 
+  useEffect(() => {
+    if (user && selectedRole) {
+      checkExistingProfile()
+    }
+  }, [user, selectedRole])
+
+  const checkExistingProfile = async () => {
+    if (!user) return
+
+    try {
+      const tableName = selectedRole === 'developer' ? 'developer_profiles' : 'company_profiles'
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (data && !error) {
+        setExistingProfile(data)
+        
+        // Pre-fill form with existing data
+        if (selectedRole === 'developer') {
+          const devProfile = data as DeveloperProfile
+          developerForm.reset({
+            full_name: devProfile.full_name || '',
+            email: devProfile.email || '',
+            bio: devProfile.bio || '',
+            github_url: devProfile.github_url || '',
+            linkedin_url: devProfile.linkedin_url || '',
+            years_experience: devProfile.years_experience || undefined,
+            location: devProfile.location || '',
+          })
+          setSkills(devProfile.skills || [])
+        } else {
+          const compProfile = data as CompanyProfile
+          companyForm.reset({
+            company_name: compProfile.company_name || '',
+            email: compProfile.email || '',
+            sector: compProfile.sector || '',
+            description: compProfile.description || '',
+            contact_email: compProfile.contact_email || '',
+            website_url: compProfile.website_url || '',
+            location: compProfile.location || '',
+            company_size: compProfile.company_size || '',
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Error checking existing profile:', error)
+    }
+  }
+
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
       setSkills([...skills, newSkill.trim()])
@@ -69,23 +125,95 @@ export const ProfileSetup = () => {
     setSkills(skills.filter(skill => skill !== skillToRemove))
   }
 
+  const handleCvUpload = async (file: File) => {
+    if (!user) return
+
+    setCvUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}/cv.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('cvs')
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('cvs')
+        .getPublicUrl(fileName)
+
+      // Update developer profile with CV URL
+      const { error: updateError } = await supabase
+        .from('developer_profiles')
+        .update({ cv_url: data.publicUrl })
+        .eq('user_id', user.id)
+
+      if (updateError) throw updateError
+
+      toast({
+        title: 'CV subido exitosamente!',
+        description: 'Tu CV ha sido actualizado.',
+      })
+
+      // Update existing profile state
+      if (existingProfile) {
+        setExistingProfile({ ...existingProfile, cv_url: data.publicUrl })
+      }
+
+      setCvFile(null)
+    } catch (error) {
+      console.error('Error uploading CV:', error)
+      toast({
+        title: 'Error al subir CV',
+        description: 'Por favor intenta de nuevo.',
+        variant: 'destructive',
+      })
+    } finally {
+      setCvUploading(false)
+    }
+  }
+
   const onSubmitDeveloper = async (values: z.infer<typeof developerSchema>) => {
     if (!selectedRole) return
 
     setLoading(true)
     try {
-      await createUserProfile(selectedRole, {
-        ...values,
-        skills,
-      })
-      toast({
-        title: 'Profile created successfully!',
-        description: 'Welcome to Mini Talento Tech Platform.',
-      })
+      if (existingProfile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('developer_profiles')
+          .update({
+            ...values,
+            skills,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user?.id)
+
+        if (error) throw error
+
+        toast({
+          title: 'Perfil actualizado exitosamente!',
+          description: 'Tus cambios han sido guardados.',
+        })
+        setExistingProfile({ ...existingProfile, ...values, skills })
+        setShowEditForm(false)
+      } else {
+        // Create new profile
+        await createUserProfile(selectedRole, {
+          ...values,
+          skills,
+        })
+        toast({
+          title: 'Perfil creado exitosamente!',
+          description: 'Bienvenido a Mini Talento Tech Platform.',
+        })
+      }
     } catch (error) {
+      console.error('Error with profile:', error)
       toast({
-        title: 'Error creating profile',
-        description: 'Please try again.',
+        title: 'Error con el perfil',
+        description: 'Por favor intenta de nuevo.',
         variant: 'destructive',
       })
     } finally {
@@ -98,15 +226,37 @@ export const ProfileSetup = () => {
 
     setLoading(true)
     try {
-      await createUserProfile(selectedRole, values)
-      toast({
-        title: 'Profile created successfully!',
-        description: 'Welcome to Mini Talento Tech Platform.',
-      })
+      if (existingProfile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('company_profiles')
+          .update({
+            ...values,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user?.id)
+
+        if (error) throw error
+
+        toast({
+          title: 'Perfil actualizado exitosamente!',
+          description: 'Tus cambios han sido guardados.',
+        })
+        setExistingProfile({ ...existingProfile, ...values })
+        setShowEditForm(false)
+      } else {
+        // Create new profile
+        await createUserProfile(selectedRole, values)
+        toast({
+          title: 'Perfil creado exitosamente!',
+          description: 'Bienvenido a Mini Talento Tech Platform.',
+        })
+      }
     } catch (error) {
+      console.error('Error with profile:', error)
       toast({
-        title: 'Error creating profile',
-        description: 'Please try again.',
+        title: 'Error con el perfil',
+        description: 'Por favor intenta de nuevo.',
         variant: 'destructive',
       })
     } finally {
@@ -114,14 +264,185 @@ export const ProfileSetup = () => {
     }
   }
 
+  // Show talent dashboard for companies with existing profiles
+  if (selectedRole === 'company' && existingProfile && !showEditForm) {
+    return <TalentDashboard />
+  }
+
+  // Show existing profile for developers
+  if (selectedRole === 'developer' && existingProfile && !showEditForm) {
+    const devProfile = existingProfile as DeveloperProfile
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-card border-0">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center justify-between">
+              Tu Perfil de Developer
+              <Button onClick={() => setShowEditForm(true)} variant="outline" size="sm">
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold mb-2">Información Personal</h3>
+                <p className="text-sm"><strong>Nombre:</strong> {devProfile.full_name}</p>
+                <p className="text-sm"><strong>Email:</strong> {devProfile.email}</p>
+                {devProfile.location && (
+                  <p className="text-sm"><strong>Ubicación:</strong> {devProfile.location}</p>
+                )}
+                {devProfile.years_experience && (
+                  <p className="text-sm"><strong>Experiencia:</strong> {devProfile.years_experience} años</p>
+                )}
+              </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Enlaces</h3>
+                {devProfile.github_url && (
+                  <p className="text-sm">
+                    <strong>GitHub:</strong> 
+                    <a href={devProfile.github_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
+                      Ver perfil
+                    </a>
+                  </p>
+                )}
+                {devProfile.linkedin_url && (
+                  <p className="text-sm">
+                    <strong>LinkedIn:</strong> 
+                    <a href={devProfile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
+                      Ver perfil
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {devProfile.bio && (
+              <div>
+                <h3 className="font-semibold mb-2">Bio</h3>
+                <p className="text-sm text-muted-foreground">{devProfile.bio}</p>
+              </div>
+            )}
+
+            {devProfile.skills && devProfile.skills.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2">Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {devProfile.skills.map((skill: string) => (
+                    <Badge key={skill} variant="secondary">{skill}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <h3 className="font-semibold">Curriculum Vitae</h3>
+              {devProfile.cv_url ? (
+                <div className="flex items-center gap-4">
+                  <Button variant="outline" asChild>
+                    <a href={devProfile.cv_url} target="_blank" rel="noopener noreferrer">
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver CV actual
+                    </a>
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setCvFile(file)
+                        }
+                      }}
+                      className="hidden"
+                      id="cv-upload"
+                    />
+                    <label htmlFor="cv-upload">
+                      <Button variant="outline" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Actualizar CV
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+                  <div className="text-center space-y-2">
+                    <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No has subido tu CV aún</p>
+                    <Input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setCvFile(file)
+                        }
+                      }}
+                      className="hidden"
+                      id="cv-upload"
+                    />
+                    <label htmlFor="cv-upload">
+                      <Button variant="outline" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Subir CV
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {cvFile && (
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Archivo seleccionado: {cvFile.name}</p>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => handleCvUpload(cvFile)}
+                      disabled={cvUploading}
+                      size="sm"
+                    >
+                      {cvUploading ? 'Subiendo...' : 'Confirmar subida'}
+                    </Button>
+                    <Button 
+                      onClick={() => setCvFile(null)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={() => setSelectedRole(null)}
+              variant="outline"
+              className="w-full"
+            >
+              Cambiar rol
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (!selectedRole) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-card border-0">
           <CardHeader className="text-center space-y-4">
-            <CardTitle className="text-2xl">Choose Your Role</CardTitle>
+            <CardTitle className="text-2xl">Elige tu Rol</CardTitle>
             <CardDescription>
-              Select how you'd like to use the platform
+              Selecciona cómo quieres usar la plataforma
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -133,7 +454,7 @@ export const ProfileSetup = () => {
               <Code2 className="h-6 w-6" />
               <div>
                 <div className="font-semibold">Developer</div>
-                <div className="text-xs text-muted-foreground">Showcase your skills</div>
+                <div className="text-xs text-muted-foreground">Muestra tus habilidades</div>
               </div>
             </Button>
 
@@ -145,7 +466,7 @@ export const ProfileSetup = () => {
               <Building2 className="h-6 w-6" />
               <div>
                 <div className="font-semibold">Company</div>
-                <div className="text-xs text-muted-foreground">Find top talent</div>
+                <div className="text-xs text-muted-foreground">Encuentra talento</div>
               </div>
             </Button>
           </CardContent>
@@ -158,11 +479,13 @@ export const ProfileSetup = () => {
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
       <Card className="w-full max-w-lg shadow-card border-0">
         <CardHeader>
-          <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
+          <CardTitle className="text-2xl">
+            {existingProfile ? 'Editar Perfil' : 'Completa tu Perfil'}
+          </CardTitle>
           <CardDescription>
             {selectedRole === 'developer' 
-              ? 'Tell us about your development experience'
-              : 'Tell us about your company'
+              ? 'Cuéntanos sobre tu experiencia como desarrollador'
+              : 'Cuéntanos sobre tu empresa'
             }
           </CardDescription>
         </CardHeader>
@@ -175,9 +498,9 @@ export const ProfileSetup = () => {
                   name="full_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>Nombre Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your full name" {...field} />
+                        <Input placeholder="Tu nombre completo" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -191,7 +514,7 @@ export const ProfileSetup = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="your.email@example.com" {...field} />
+                        <Input placeholder="tu.email@ejemplo.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -202,7 +525,7 @@ export const ProfileSetup = () => {
                   <FormLabel>Skills</FormLabel>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Add a skill"
+                      placeholder="Agregar una skill"
                       value={newSkill}
                       onChange={(e) => setNewSkill(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
@@ -232,9 +555,9 @@ export const ProfileSetup = () => {
                   name="bio"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bio (Optional)</FormLabel>
+                      <FormLabel>Bio (Opcional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Tell us about yourself..." {...field} />
+                        <Textarea placeholder="Cuéntanos sobre ti..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -247,7 +570,7 @@ export const ProfileSetup = () => {
                     name="github_url"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>GitHub URL (Optional)</FormLabel>
+                        <FormLabel>GitHub URL (Opcional)</FormLabel>
                         <FormControl>
                           <Input placeholder="https://github.com/..." {...field} />
                         </FormControl>
@@ -261,7 +584,7 @@ export const ProfileSetup = () => {
                     name="linkedin_url"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>LinkedIn URL (Optional)</FormLabel>
+                        <FormLabel>LinkedIn URL (Opcional)</FormLabel>
                         <FormControl>
                           <Input placeholder="https://linkedin.com/..." {...field} />
                         </FormControl>
@@ -271,17 +594,56 @@ export const ProfileSetup = () => {
                   />
                 </div>
 
+                <FormField
+                  control={developerForm.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ubicación (Opcional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ciudad, País" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={developerForm.control}
+                  name="years_experience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Años de Experiencia (Opcional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0" 
+                          {...field} 
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="flex gap-4 pt-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setSelectedRole(null)}
+                    onClick={() => {
+                      if (existingProfile) {
+                        setShowEditForm(false)
+                      } else {
+                        setSelectedRole(null)
+                      }
+                    }}
                     className="flex-1"
                   >
-                    Back
+                    {existingProfile ? 'Cancelar' : 'Atrás'}
                   </Button>
                   <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? 'Creating...' : 'Complete Profile'}
+                    {loading ? 'Guardando...' : existingProfile ? 'Guardar cambios' : 'Completar perfil'}
                   </Button>
                 </div>
               </form>
@@ -294,9 +656,9 @@ export const ProfileSetup = () => {
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Name</FormLabel>
+                      <FormLabel>Nombre de la Empresa</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your company name" {...field} />
+                        <Input placeholder="Nombre de tu empresa" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -308,9 +670,9 @@ export const ProfileSetup = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Email</FormLabel>
+                      <FormLabel>Email de la Empresa</FormLabel>
                       <FormControl>
-                        <Input placeholder="company@example.com" {...field} />
+                        <Input placeholder="empresa@ejemplo.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -324,7 +686,7 @@ export const ProfileSetup = () => {
                     <FormItem>
                       <FormLabel>Sector</FormLabel>
                       <FormControl>
-                        <Input placeholder="Technology, Finance, Healthcare..." {...field} />
+                        <Input placeholder="Tecnología, Finanzas, Salud..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -336,9 +698,9 @@ export const ProfileSetup = () => {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Description</FormLabel>
+                      <FormLabel>Descripción de la Empresa</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe your company..." {...field} />
+                        <Textarea placeholder="Describe tu empresa..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -350,9 +712,9 @@ export const ProfileSetup = () => {
                   name="contact_email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
+                      <FormLabel>Email de Contacto</FormLabel>
                       <FormControl>
-                        <Input placeholder="contact@company.com" {...field} />
+                        <Input placeholder="contacto@empresa.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -363,13 +725,19 @@ export const ProfileSetup = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setSelectedRole(null)}
+                    onClick={() => {
+                      if (existingProfile) {
+                        setShowEditForm(false)
+                      } else {
+                        setSelectedRole(null)
+                      }
+                    }}
                     className="flex-1"
                   >
-                    Back
+                    {existingProfile ? 'Cancelar' : 'Atrás'}
                   </Button>
                   <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? 'Creating...' : 'Complete Profile'}
+                    {loading ? 'Guardando...' : existingProfile ? 'Guardar cambios' : 'Completar perfil'}
                   </Button>
                 </div>
               </form>
@@ -380,3 +748,5 @@ export const ProfileSetup = () => {
     </div>
   )
 }
+
+export default ProfileSetup
