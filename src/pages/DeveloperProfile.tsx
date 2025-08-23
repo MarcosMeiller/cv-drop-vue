@@ -115,7 +115,7 @@ export default function DeveloperProfile() {
 
       // Update profile with CV URL
       const { error } = await supabase
-        .from('user_profiles')
+        .from('developer_profiles')
         .update({ cv_url: data.publicUrl })
         .eq('user_id', user.id)
 
@@ -154,7 +154,7 @@ export default function DeveloperProfile() {
 
       // Update profile with avatar URL
       const { error } = await supabase
-        .from('user_profiles')
+        .from('developer_profiles')
         .update({ avatar_url: data.publicUrl })
         .eq('user_id', user.id)
 
@@ -183,7 +183,7 @@ export default function DeveloperProfile() {
     setLoading(true)
     try {
       const { error } = await supabase
-        .from('user_profiles')
+        .from('developer_profiles')
         .update({
           ...values,
           skills,

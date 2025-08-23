@@ -33,10 +33,9 @@ export default function PublicDeveloperProfile() {
 
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('developer_profiles')
         .select('*')
         .eq('id', id)
-        .eq('role', 'developer')
         .single()
 
       if (error) {

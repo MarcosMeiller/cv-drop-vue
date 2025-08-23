@@ -90,7 +90,7 @@ export default function CompanyProfile() {
 
       // Update profile with logo URL
       const { error } = await supabase
-        .from('user_profiles')
+        .from('company_profiles')
         .update({ logo_url: data.publicUrl })
         .eq('user_id', user.id)
 
@@ -119,7 +119,7 @@ export default function CompanyProfile() {
     setLoading(true)
     try {
       const { error } = await supabase
-        .from('user_profiles')
+        .from('company_profiles')
         .update({
           ...values,
           updated_at: new Date().toISOString(),

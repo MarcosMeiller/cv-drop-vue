@@ -1,9 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/integrations/supabase/client'
 
-const supabaseUrl = 'https://wzfxdckkhopjrxxnrqkq.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZnhkY2traG9wanJ4eG5ycWtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ4NjI2MTksImV4cCI6MjA1MDQzODYxOX0.SfZnKInhUnQ6i80bJZ6Q9Jf5Nap26uLJMXzJ5VGvhPE'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export { supabase }
 
 export type UserRole = 'developer' | 'company'
 
@@ -15,7 +12,9 @@ export interface UserProfile {
   updated_at: string
 }
 
-export interface DeveloperProfile extends UserProfile {
+export interface DeveloperProfile {
+  id: string
+  user_id: string
   full_name: string
   email: string
   skills: string[]
@@ -26,9 +25,13 @@ export interface DeveloperProfile extends UserProfile {
   cv_url?: string
   years_experience?: number
   location?: string
+  created_at: string
+  updated_at: string
 }
 
-export interface CompanyProfile extends UserProfile {
+export interface CompanyProfile {
+  id: string
+  user_id: string
   company_name: string
   email: string
   sector: string
@@ -38,4 +41,6 @@ export interface CompanyProfile extends UserProfile {
   website_url?: string
   location?: string
   company_size?: string
+  created_at: string
+  updated_at: string
 }

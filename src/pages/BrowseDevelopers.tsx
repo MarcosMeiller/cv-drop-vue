@@ -37,9 +37,8 @@ export default function BrowseDevelopers() {
   const fetchDevelopers = async () => {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('developer_profiles')
         .select('*')
-        .eq('role', 'developer')
         .order('created_at', { ascending: false })
 
       if (error) throw error

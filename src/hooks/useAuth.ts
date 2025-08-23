@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase, UserProfile, UserRole } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
+import { UserProfile, UserRole } from '@/lib/supabase'
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -48,7 +49,7 @@ export const useAuth = () => {
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching user profile:', error)
       } else if (data) {
-        setUserProfile(data)
+        setUserProfile(data as UserProfile)
       }
     } catch (error) {
       console.error('Error fetching user profile:', error)
@@ -68,27 +69,84 @@ export const useAuth = () => {
     if (!user) return
 
     try {
-      const profileData = {
+      // First create user profile record
+      const userProfileData = {
         user_id: user.id,
         role,
-        ...additionalData,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
 
-      const { data, error } = await supabase
+      const { error: userProfileError } = await supabase
         .from('user_profiles')
-        .insert([profileData])
-        .select()
-        .single()
+        .insert([userProfileData])
 
-      if (error) {
-        console.error('Error creating user profile:', error)
-        throw error
+      if (userProfileError) {
+        console.error('Error creating user profile:', userProfileError)
+        throw userProfileError
       }
 
-      setUserProfile(data)
-      return data
+      // Then create specific profile based on role
+      let specificProfileData
+      if (role === 'developer') {
+        specificProfileData = {
+          user_id: user.id,
+          full_name: additionalData.full_name,
+          email: additionalData.email,
+          skills: additionalData.skills || [],
+          github_url: additionalData.github_url,
+          linkedin_url: additionalData.linkedin_url,
+          bio: additionalData.bio,
+          years_experience: additionalData.years_experience,
+          location: additionalData.location,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+
+        const { data, error } = await supabase
+          .from('developer_profiles')
+          .insert([specificProfileData])
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error creating developer profile:', error)
+          throw error
+        }
+
+        // Set both user profile and specific profile
+        setUserProfile({ ...userProfileData, id: data.id } as UserProfile)
+        return data
+      } else if (role === 'company') {
+        specificProfileData = {
+          user_id: user.id,
+          company_name: additionalData.company_name,
+          email: additionalData.email,
+          sector: additionalData.sector,
+          description: additionalData.description,
+          contact_email: additionalData.contact_email,
+          website_url: additionalData.website_url,
+          location: additionalData.location,
+          company_size: additionalData.company_size,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+
+        const { data, error } = await supabase
+          .from('company_profiles')
+          .insert([specificProfileData])
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error creating company profile:', error)
+          throw error
+        }
+
+        // Set both user profile and specific profile
+        setUserProfile({ ...userProfileData, id: data.id } as UserProfile)
+        return data
+      }
     } catch (error) {
       console.error('Error creating user profile:', error)
       throw error

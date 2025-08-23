@@ -36,9 +36,8 @@ export default function BrowseCompanies() {
   const fetchCompanies = async () => {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('company_profiles')
         .select('*')
-        .eq('role', 'company')
         .order('created_at', { ascending: false })
 
       if (error) throw error

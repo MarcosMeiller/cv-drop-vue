@@ -31,10 +31,9 @@ export default function PublicCompanyProfile() {
 
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('company_profiles')
         .select('*')
         .eq('id', id)
-        .eq('role', 'company')
         .single()
 
       if (error) {
