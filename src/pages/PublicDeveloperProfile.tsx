@@ -13,12 +13,12 @@ import {
   Mail,
   ArrowLeft
 } from 'lucide-react'
-import { supabase, DeveloperProfile } from '@/lib/supabase'
+import { supabase, DeveloperProfilePublic } from '@/lib/supabase'
 import { Link } from 'react-router-dom'
 
 export default function PublicDeveloperProfile() {
   const { id } = useParams<{ id: string }>()
-  const [developer, setDeveloper] = useState<DeveloperProfile | null>(null)
+  const [developer, setDeveloper] = useState<DeveloperProfilePublic | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -33,7 +33,7 @@ export default function PublicDeveloperProfile() {
 
     try {
       const { data, error } = await supabase
-        .from('developer_profiles')
+        .from('developer_profiles_public')
         .select('*')
         .eq('id', id)
         .single()
@@ -86,7 +86,7 @@ export default function PublicDeveloperProfile() {
             <Avatar className="h-24 w-24">
               <AvatarImage src={developer.avatar_url} />
               <AvatarFallback className="text-2xl">
-                {developer.full_name?.charAt(0) || developer.email?.charAt(0)}
+                {developer.full_name?.charAt(0) || 'D'}
               </AvatarFallback>
             </Avatar>
             
@@ -108,10 +108,7 @@ export default function PublicDeveloperProfile() {
                   </div>
                 )}
                 
-                <div className="flex items-center gap-1">
-                  <Mail className="h-4 w-4" />
-                  {developer.email}
-                </div>
+                {/* Email removed for privacy */}
               </div>
               
               <div className="flex flex-wrap gap-2 pt-2">
@@ -188,15 +185,10 @@ export default function PublicDeveloperProfile() {
         <div className="space-y-6">
           <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
+              <CardTitle>Professional Contact</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{developer.email}</span>
-                </div>
-                
                 {developer.location && (
                   <div className="flex items-center gap-3">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -205,12 +197,9 @@ export default function PublicDeveloperProfile() {
                 )}
               </div>
               
-              <Button asChild className="w-full">
-                <a href={`mailto:${developer.email}`}>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Contact Developer
-                </a>
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                Connect through social profiles or download CV for contact details
+              </p>
             </CardContent>
           </Card>
 

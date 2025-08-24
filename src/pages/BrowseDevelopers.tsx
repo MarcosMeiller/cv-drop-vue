@@ -15,12 +15,12 @@ import {
   Eye
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { supabase, DeveloperProfile } from '@/lib/supabase'
+import { supabase, DeveloperProfilePublic } from '@/lib/supabase'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function BrowseDevelopers() {
-  const [developers, setDevelopers] = useState<DeveloperProfile[]>([])
-  const [filteredDevelopers, setFilteredDevelopers] = useState<DeveloperProfile[]>([])
+  const [developers, setDevelopers] = useState<DeveloperProfilePublic[]>([])
+  const [filteredDevelopers, setFilteredDevelopers] = useState<DeveloperProfilePublic[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSkill, setSelectedSkill] = useState<string>('')
@@ -37,7 +37,7 @@ export default function BrowseDevelopers() {
   const fetchDevelopers = async () => {
     try {
       const { data, error } = await supabase
-        .from('developer_profiles')
+        .from('developer_profiles_public')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -53,11 +53,10 @@ export default function BrowseDevelopers() {
   const filterDevelopers = () => {
     let filtered = developers
 
-    // Search by name, email, or bio
+    // Search by name or bio
     if (searchTerm) {
       filtered = filtered.filter(dev =>
         dev.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dev.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         dev.bio?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -187,7 +186,7 @@ export default function BrowseDevelopers() {
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={developer.avatar_url} />
                     <AvatarFallback className="text-lg">
-                      {developer.full_name?.charAt(0) || developer.email?.charAt(0)}
+                      {developer.full_name?.charAt(0) || 'D'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">

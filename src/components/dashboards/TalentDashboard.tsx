@@ -16,13 +16,13 @@ import {
   Eye,
   Users
 } from 'lucide-react'
-import { supabase, DeveloperProfile } from '@/lib/supabase'
+import { supabase, DeveloperProfilePublic } from '@/lib/supabase'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Link } from 'react-router-dom'
 
 export default function TalentDashboard() {
-  const [developers, setDevelopers] = useState<DeveloperProfile[]>([])
-  const [filteredDevelopers, setFilteredDevelopers] = useState<DeveloperProfile[]>([])
+  const [developers, setDevelopers] = useState<DeveloperProfilePublic[]>([])
+  const [filteredDevelopers, setFilteredDevelopers] = useState<DeveloperProfilePublic[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [skillFilter, setSkillFilter] = useState('all')
@@ -40,7 +40,7 @@ export default function TalentDashboard() {
   const fetchDevelopers = async () => {
     try {
       const { data, error } = await supabase
-        .from('developer_profiles')
+        .from('developer_profiles_public')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -56,11 +56,10 @@ export default function TalentDashboard() {
   const filterDevelopers = () => {
     let filtered = developers
 
-    // Search by name, email, or bio
+    // Search by name or bio (email removed for privacy)
     if (searchTerm) {
       filtered = filtered.filter(developer =>
         developer.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        developer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         developer.bio?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -223,7 +222,7 @@ export default function TalentDashboard() {
                   <Avatar className="h-12 w-12 md:h-16 md:w-16 flex-shrink-0">
                     <AvatarImage src={developer.avatar_url} />
                     <AvatarFallback className="text-sm md:text-lg">
-                      {developer.full_name?.charAt(0) || developer.email?.charAt(0)}
+                      {developer.full_name?.charAt(0) || 'D'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
@@ -231,7 +230,7 @@ export default function TalentDashboard() {
                       {developer.full_name || 'Developer'}
                     </CardTitle>
                     <CardDescription className="mt-1 text-xs md:text-sm truncate">
-                      {developer.email}
+                      {/* Email removed for privacy */}
                     </CardDescription>
                     <div className="flex items-center gap-1 md:gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                       <Calendar className="h-3 w-3" />
@@ -294,11 +293,7 @@ export default function TalentDashboard() {
                     </Button>
                   )}
 
-                  <Button variant="outline" size="sm" asChild className="p-2">
-                    <a href={`mailto:${developer.email}`}>
-                      <Mail className="h-3 w-3 md:h-4 md:w-4" />
-                    </a>
-                  </Button>
+                  {/* Email contact button removed for privacy */}
                 </div>
 
                 <Button className="w-full text-xs md:text-sm" size="sm" asChild>
