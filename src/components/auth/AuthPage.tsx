@@ -56,20 +56,20 @@ export const AuthPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="h-screen bg-gradient-subtle flex items-center justify-center p-4 overflow-hidden">
+      <div className="w-full max-w-md space-y-4 max-h-screen overflow-y-auto">
         {/* Header */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <div className="flex justify-center">
-            <div className="h-16 w-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-glow">
-              <Code2 className="h-8 w-8 text-primary-foreground" />
+            <div className="h-12 w-12 sm:h-16 sm:w-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-glow">
+              <Code2 className="h-6 w-6 sm:h-8 sm:w-8 text-primary-foreground" />
             </div>
           </div>
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Mini Talento Tech
             </h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-1 sm:mt-2 text-sm">
               Connect developers with companies
             </p>
           </div>
@@ -166,16 +166,16 @@ export const AuthPage = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div className="p-4 rounded-lg bg-card/50 border">
-            <Code2 className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <h3 className="font-semibold text-sm">For Developers</h3>
-            <p className="text-xs text-muted-foreground">Showcase your skills</p>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="p-3 rounded-lg bg-card/50 border">
+            <Code2 className="h-5 w-5 mx-auto mb-1 text-primary" />
+            <h3 className="font-semibold text-xs sm:text-sm">For Developers</h3>
+            <p className="text-xs text-muted-foreground hidden sm:block">Showcase your skills</p>
           </div>
-          <div className="p-4 rounded-lg bg-card/50 border">
-            <Building2 className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <h3 className="font-semibold text-sm">For Companies</h3>
-            <p className="text-xs text-muted-foreground">Find top talent</p>
+          <div className="p-3 rounded-lg bg-card/50 border">
+            <Building2 className="h-5 w-5 mx-auto mb-1 text-primary" />
+            <h3 className="font-semibold text-xs sm:text-sm">For Companies</h3>
+            <p className="text-xs text-muted-foreground hidden sm:block">Find top talent</p>
           </div>
         </div>
       </div>
