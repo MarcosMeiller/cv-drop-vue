@@ -82,11 +82,24 @@ export default function CompanyProfile() {
 
     try {
       const fileName = `${user.id}/logo-${Date.now()}.jpg`
-      await uploadFile(file, 'logos', fileName)
+      await uploadFile(file, 'avatars', fileName)
 
       const { data } = supabase.storage
-        .from('logos')
+        .from('avatars')
         .getPublicUrl(fileName)
+
+      // Track image in database
+      const { error: dbError } = await supabase
+        .from('profile_images')
+        .insert({
+          user_id: user.id,
+          file_name: file.name,
+          file_path: fileName,
+          file_size: file.size,
+          mime_type: file.type
+        })
+
+      if (dbError) throw dbError
 
       // Update profile with logo URL
       const { error } = await supabase

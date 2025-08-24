@@ -104,14 +104,28 @@ export default function DeveloperProfile() {
         setCvProgress(prev => Math.min(prev + 10, 90))
       }, 200)
 
-      await uploadFile(file, 'documents', fileName)
+      await uploadFile(file, 'cvs', fileName)
       
       clearInterval(progressInterval)
       setCvProgress(100)
 
       const { data } = supabase.storage
-        .from('documents')
+        .from('cvs')
         .getPublicUrl(fileName)
+
+      // Track file in database
+      const { error: dbError } = await supabase
+        .from('pdf_documents')
+        .insert({
+          user_id: user.id,
+          file_name: file.name,
+          file_path: fileName,
+          file_size: file.size,
+          mime_type: file.type,
+          document_type: 'cv'
+        })
+
+      if (dbError) throw dbError
 
       // Update profile with CV URL
       const { error } = await supabase
@@ -151,6 +165,19 @@ export default function DeveloperProfile() {
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName)
+
+      // Track image in database
+      const { error: dbError } = await supabase
+        .from('profile_images')
+        .insert({
+          user_id: user.id,
+          file_name: file.name,
+          file_path: fileName,
+          file_size: file.size,
+          mime_type: file.type
+        })
+
+      if (dbError) throw dbError
 
       // Update profile with avatar URL
       const { error } = await supabase
