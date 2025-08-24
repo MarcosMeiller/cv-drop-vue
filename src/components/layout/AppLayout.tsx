@@ -25,24 +25,24 @@ export const AppLayout = () => {
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-50">
-            <div className="flex items-center gap-4">
+          <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 sticky top-0 z-50">
+            <div className="flex items-center gap-2 md:gap-4 min-w-0">
               {user && userProfile && <SidebarTrigger />}
-              <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <h1 className="text-lg md:text-xl font-bold bg-gradient-primary bg-clip-text text-transparent truncate">
                 Mini Talento Tech
               </h1>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
               
               {user && userProfile && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                      <Avatar className="h-10 w-10">
+                    <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full">
+                      <Avatar className="h-8 w-8 md:h-10 md:w-10">
                         <AvatarImage src={userProfile.role === 'developer' ? (userProfile as any).avatar_url : (userProfile as any).logo_url} />
-                        <AvatarFallback>
+                        <AvatarFallback className="text-xs md:text-sm">
                           {userProfile.role === 'developer' 
                             ? (userProfile as any).full_name?.charAt(0) || user.email?.charAt(0) 
                             : (userProfile as any).company_name?.charAt(0) || user.email?.charAt(0)
@@ -68,7 +68,7 @@ export const AppLayout = () => {
           </header>
 
           {/* Main content */}
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 md:p-6">
             <Outlet />
           </main>
         </div>

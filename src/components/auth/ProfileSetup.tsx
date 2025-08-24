@@ -274,9 +274,9 @@ export const ProfileSetup = () => {
     const devProfile = existingProfile as DeveloperProfile
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl shadow-card border-0">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center justify-between">
+        <Card className="w-full max-w-sm md:max-w-2xl shadow-card border-0">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg md:text-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               Tu Perfil de Developer
               <Button onClick={() => setShowEditForm(true)} variant="outline" size="sm">
                 <Edit className="h-4 w-4 mr-2" />
@@ -284,34 +284,34 @@ export const ProfileSetup = () => {
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 md:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="font-semibold mb-2">Información Personal</h3>
-                <p className="text-sm"><strong>Nombre:</strong> {devProfile.full_name}</p>
-                <p className="text-sm"><strong>Email:</strong> {devProfile.email}</p>
+                <h3 className="font-semibold mb-2 text-sm md:text-base">Información Personal</h3>
+                <p className="text-xs md:text-sm"><strong>Nombre:</strong> {devProfile.full_name}</p>
+                <p className="text-xs md:text-sm truncate"><strong>Email:</strong> {devProfile.email}</p>
                 {devProfile.location && (
-                  <p className="text-sm"><strong>Ubicación:</strong> {devProfile.location}</p>
+                  <p className="text-xs md:text-sm"><strong>Ubicación:</strong> {devProfile.location}</p>
                 )}
                 {devProfile.years_experience && (
-                  <p className="text-sm"><strong>Experiencia:</strong> {devProfile.years_experience} años</p>
+                  <p className="text-xs md:text-sm"><strong>Experiencia:</strong> {devProfile.years_experience} años</p>
                 )}
               </div>
               
               <div>
-                <h3 className="font-semibold mb-2">Enlaces</h3>
+                <h3 className="font-semibold mb-2 text-sm md:text-base">Enlaces</h3>
                 {devProfile.github_url && (
-                  <p className="text-sm">
+                  <p className="text-xs md:text-sm">
                     <strong>GitHub:</strong> 
-                    <a href={devProfile.github_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
+                    <a href={devProfile.github_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1 break-all">
                       Ver perfil
                     </a>
                   </p>
                 )}
                 {devProfile.linkedin_url && (
-                  <p className="text-sm">
+                  <p className="text-xs md:text-sm">
                     <strong>LinkedIn:</strong> 
-                    <a href={devProfile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
+                    <a href={devProfile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1 break-all">
                       Ver perfil
                     </a>
                   </p>
@@ -438,22 +438,22 @@ export const ProfileSetup = () => {
   if (!selectedRole) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-card border-0">
-          <CardHeader className="text-center space-y-4">
-            <CardTitle className="text-2xl">Elige tu Rol</CardTitle>
-            <CardDescription>
+        <Card className="w-full max-w-sm md:max-w-md shadow-card border-0">
+          <CardHeader className="text-center space-y-3 md:space-y-4">
+            <CardTitle className="text-xl md:text-2xl">Elige tu Rol</CardTitle>
+            <CardDescription className="text-sm md:text-base">
               Selecciona cómo quieres usar la plataforma
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 md:space-y-4">
             <Button
               onClick={() => setSelectedRole('developer')}
               variant="outline"
-              className="w-full h-20 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary"
+              className="w-full h-16 md:h-20 flex flex-col gap-1 md:gap-2 hover:bg-primary/5 hover:border-primary"
             >
-              <Code2 className="h-6 w-6" />
+              <Code2 className="h-5 w-5 md:h-6 md:w-6" />
               <div>
-                <div className="font-semibold">Developer</div>
+                <div className="font-semibold text-sm md:text-base">Developer</div>
                 <div className="text-xs text-muted-foreground">Muestra tus habilidades</div>
               </div>
             </Button>
@@ -461,11 +461,11 @@ export const ProfileSetup = () => {
             <Button
               onClick={() => setSelectedRole('company')}
               variant="outline"
-              className="w-full h-20 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary"
+              className="w-full h-16 md:h-20 flex flex-col gap-1 md:gap-2 hover:bg-primary/5 hover:border-primary"
             >
-              <Building2 className="h-6 w-6" />
+              <Building2 className="h-5 w-5 md:h-6 md:w-6" />
               <div>
-                <div className="font-semibold">Company</div>
+                <div className="font-semibold text-sm md:text-base">Company</div>
                 <div className="text-xs text-muted-foreground">Encuentra talento</div>
               </div>
             </Button>
@@ -477,12 +477,12 @@ export const ProfileSetup = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg shadow-card border-0">
-        <CardHeader>
-          <CardTitle className="text-2xl">
+      <Card className="w-full max-w-sm md:max-w-lg shadow-card border-0">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg md:text-2xl">
             {existingProfile ? 'Editar Perfil' : 'Completa tu Perfil'}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm md:text-base">
             {selectedRole === 'developer' 
               ? 'Cuéntanos sobre tu experiencia como desarrollador'
               : 'Cuéntanos sobre tu empresa'
