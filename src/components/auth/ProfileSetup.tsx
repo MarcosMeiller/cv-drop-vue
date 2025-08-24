@@ -15,7 +15,8 @@ import { useToast } from '@/hooks/use-toast'
 import TalentDashboard from '@/components/dashboards/TalentDashboard'
 
 const developerSchema = z.object({
-  full_name: z.string().min(2, 'Name must be at least 2 characters'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   bio: z.string().optional(),
   github_url: z.string().url('Invalid GitHub URL').optional().or(z.literal('')),
@@ -44,12 +45,15 @@ export const ProfileSetup = () => {
   const [cvUploading, setCvUploading] = useState(false)
   const [existingProfile, setExistingProfile] = useState<DeveloperProfile | CompanyProfile | null>(null)
   const [showEditForm, setShowEditForm] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const { user, createUserProfile } = useAuth()
   const { toast } = useToast()
 
   const developerForm = useForm<z.infer<typeof developerSchema>>({
     resolver: zodResolver(developerSchema),
     defaultValues: {
+      firstName: user?.user_metadata?.first_name || '',
+      lastName: user?.user_metadata?.last_name || '',
       email: user?.email || '',
     },
   })
@@ -68,10 +72,28 @@ export const ProfileSetup = () => {
     }
   }, [user, selectedRole])
 
+  useEffect(() => {
+    // Show welcome message for new users
+    if (user && user.user_metadata?.first_name) {
+      toast({
+        title: `Welcome, ${user.user_metadata.first_name}!`,
+        description: 'Let\'s set up your profile to get started.',
+      })
+    }
+    
+    // Set initial loading to false after a short delay for better UX
+    const timer = setTimeout(() => {
+      setInitialLoading(false)
+    }, 1000)
+    
+    return () => clearTimeout(timer)
+  }, [user, toast])
+
   const checkExistingProfile = async () => {
     if (!user) return
 
     try {
+      setLoading(true)
       const tableName = selectedRole === 'developer' ? 'developer_profiles' : 'company_profiles'
       const { data, error } = await supabase
         .from(tableName)
@@ -85,8 +107,14 @@ export const ProfileSetup = () => {
         // Pre-fill form with existing data
         if (selectedRole === 'developer') {
           const devProfile = data as DeveloperProfile
+          // Split full_name into first and last name
+          const nameParts = devProfile.full_name?.split(' ') || ['', '']
+          const firstName = nameParts[0] || ''
+          const lastName = nameParts.slice(1).join(' ') || ''
+          
           developerForm.reset({
-            full_name: devProfile.full_name || '',
+            firstName: firstName,
+            lastName: lastName,
             email: devProfile.email || '',
             bio: devProfile.bio || '',
             github_url: devProfile.github_url || '',
@@ -111,6 +139,8 @@ export const ProfileSetup = () => {
       }
     } catch (error) {
       console.error('Error checking existing profile:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -184,7 +214,13 @@ export const ProfileSetup = () => {
         const { error } = await supabase
           .from('developer_profiles')
           .update({
-            ...values,
+            full_name: `${values.firstName} ${values.lastName}`,
+            email: values.email,
+            bio: values.bio,
+            github_url: values.github_url,
+            linkedin_url: values.linkedin_url,
+            years_experience: values.years_experience,
+            location: values.location,
             skills,
             updated_at: new Date().toISOString(),
           })
@@ -202,6 +238,7 @@ export const ProfileSetup = () => {
         // Create new profile
         await createUserProfile(selectedRole, {
           ...values,
+          full_name: `${values.firstName} ${values.lastName}`,
           skills,
         })
         toast({
@@ -264,9 +301,43 @@ export const ProfileSetup = () => {
     }
   }
 
+  // Show initial loading state
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm md:max-w-md shadow-card border-0">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Setting up your profile...</h2>
+              <p className="text-sm text-muted-foreground">Please wait while we prepare everything for you.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Show talent dashboard for companies with existing profiles
   if (selectedRole === 'company' && existingProfile && !showEditForm) {
     return <TalentDashboard />
+  }
+
+  // Show loading state when checking for existing profiles
+  if (loading && selectedRole) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm md:max-w-md shadow-card border-0">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Checking your profile...</h2>
+              <p className="text-sm text-muted-foreground">Please wait while we load your information.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   // Show existing profile for developers
@@ -495,12 +566,26 @@ export const ProfileSetup = () => {
               <form onSubmit={developerForm.handleSubmit(onSubmitDeveloper)} className="space-y-4">
                 <FormField
                   control={developerForm.control}
-                  name="full_name"
+                  name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre Completo</FormLabel>
+                      <FormLabel>Nombre</FormLabel>
                       <FormControl>
-                        <Input placeholder="Tu nombre completo" {...field} />
+                        <Input placeholder="Tu nombre" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={developerForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Apellido</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Tu apellido" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

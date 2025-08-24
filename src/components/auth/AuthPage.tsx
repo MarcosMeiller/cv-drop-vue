@@ -14,6 +14,23 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+
+// Registration form schema
+const registrationSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+})
+
 export const AuthPage = () => {
   const { theme } = useTheme()
   const { user, userProfile } = useAuth()
@@ -22,7 +39,20 @@ export const AuthPage = () => {
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
+  const [registrationLoading, setRegistrationLoading] = useState(false)
+  const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const { toast } = useToast()
+
+  const registrationForm = useForm<z.infer<typeof registrationSchema>>({
+    resolver: zodResolver(registrationSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    }
+  })
 
   useEffect(() => {
     const isRecovery =
@@ -30,6 +60,50 @@ export const AuthPage = () => {
       window.location.search.includes('type=recovery')
     if (isRecovery) setAuthMode('update_password')
   }, [location])
+
+  const handleRegistration = async (values: z.infer<typeof registrationSchema>) => {
+    setRegistrationLoading(true)
+    try {
+      // Create user account
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            first_name: values.firstName,
+            last_name: values.lastName,
+            full_name: `${values.firstName} ${values.lastName}`
+          }
+        }
+      })
+
+      if (error) throw error
+
+      setRegistrationSuccess(true)
+      toast({
+        title: 'Account created successfully!',
+        description: 'Redirecting to profile setup...',
+      })
+
+      // Show success state for better UX
+      setTimeout(() => {
+        setRegistrationSuccess(false)
+        // Switch to sign in mode
+        setAuthMode('sign_in')
+        registrationForm.reset()
+      }, 3000)
+      
+    } catch (error: any) {
+      console.error('Registration error:', error)
+      toast({
+        title: 'Registration failed',
+        description: error.message || 'Could not create account. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setRegistrationLoading(false)
+    }
+  }
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,7 +123,6 @@ export const AuthPage = () => {
     }
   }
 
-  // If user is logged in but no profile, show profile setup
   // If user is logged in but no profile, show profile setup
   if (user && !userProfile) {
     return <ProfileSetup />
@@ -104,29 +177,136 @@ export const AuthPage = () => {
           </CardHeader>
           
           <CardContent>
-            <Auth
-              supabaseClient={supabase}
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: 'hsl(221 83% 53%)',
-                      brandAccent: 'hsl(221 83% 65%)',
+            {authMode === 'sign_in' ? (
+              <Auth
+                supabaseClient={supabase}
+                appearance={{
+                  theme: ThemeSupa,
+                  variables: {
+                    default: {
+                      colors: {
+                        brand: 'hsl(221 83% 53%)',
+                        brandAccent: 'hsl(221 83% 65%)',
+                      },
                     },
                   },
-                },
-                className: {
-                  container: 'auth-container',
-                  button: 'auth-button',
-                  input: 'auth-input',
-                },
-              }}
-              view={authMode}
-              providers={['google']}
-              redirectTo={window.location.origin}
-              onlyThirdPartyProviders={false}
-            />
+                  className: {
+                    container: 'auth-container',
+                    button: 'auth-button',
+                    input: 'auth-input',
+                  },
+                }}
+                view="sign_in"
+                providers={['google']}
+                redirectTo={window.location.origin}
+                onlyThirdPartyProviders={false}
+              />
+            ) : registrationSuccess ? (
+              <div className="text-center space-y-4 py-8">
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-green-800">Account Created Successfully!</h3>
+                  <p className="text-green-600">Redirecting to profile setup...</p>
+                </div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
+              </div>
+            ) : (
+              <Form {...registrationForm}>
+                <form onSubmit={registrationForm.handleSubmit(handleRegistration)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={registrationForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registrationForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={registrationForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="john.doe@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={registrationForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={registrationForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={registrationLoading}
+                  >
+                    {registrationLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Creating account...
+                      </div>
+                    ) : (
+                      'Create account'
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
+            
             <div className="mt-4 text-center text-sm">
               <button
                 type="button"

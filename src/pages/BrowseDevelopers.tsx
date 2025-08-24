@@ -22,6 +22,7 @@ export default function BrowseDevelopers() {
   const [developers, setDevelopers] = useState<DeveloperProfilePublic[]>([])
   const [filteredDevelopers, setFilteredDevelopers] = useState<DeveloperProfilePublic[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSkill, setSelectedSkill] = useState<string>('')
   const [experienceFilter, setExperienceFilter] = useState<string>('')
@@ -36,8 +37,9 @@ export default function BrowseDevelopers() {
 
   const fetchDevelopers = async () => {
     try {
+      setError(null)
       const { data, error } = await supabase
-        .from('developer_profiles_public')
+        .from('developer_profiles')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -45,6 +47,7 @@ export default function BrowseDevelopers() {
       setDevelopers(data || [])
     } catch (error) {
       console.error('Error fetching developers:', error)
+      setError('Failed to load developers. Please try again later.')
     } finally {
       setLoading(false)
     }
@@ -94,9 +97,55 @@ export default function BrowseDevelopers() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <div className="animate-pulse">Loading developers...</div>
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">Browse Developers</h1>
+          <p className="text-muted-foreground">Find talented developers for your team</p>
+        </div>
+        
+        <Card className="shadow-card border-0">
+          <CardContent className="p-8 text-center">
+            <div className="space-y-4">
+              <div className="text-6xl">⚠️</div>
+              <h2 className="text-xl font-semibold">Error loading developers</h2>
+              <p className="text-muted-foreground">{error}</p>
+              <Button onClick={fetchDevelopers} variant="outline">
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (developers.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">Browse Developers</h1>
+          <p className="text-muted-foreground">Find talented developers for your team</p>
+        </div>
+        
+        <Card className="shadow-card border-0">
+          <CardContent className="p-8 text-center">
+            <div className="space-y-4">
+              <div className="text-6xl">👨‍💻</div>
+              <h2 className="text-xl font-semibold">No developers found</h2>
+              <p className="text-muted-foreground">There are currently no developer profiles available.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
