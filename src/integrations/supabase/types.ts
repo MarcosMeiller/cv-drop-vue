@@ -139,7 +139,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      developer_profiles_public: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          cv_url: string | null
+          full_name: string | null
+          github_url: string | null
+          id: string | null
+          linkedin_url: string | null
+          location: string | null
+          skills: string[] | null
+          updated_at: string | null
+          user_id: string | null
+          years_experience: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          cv_url?: string | null
+          full_name?: string | null
+          github_url?: string | null
+          id?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          skills?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+          years_experience?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          cv_url?: string | null
+          full_name?: string | null
+          github_url?: string | null
+          id?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          skills?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+          years_experience?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
