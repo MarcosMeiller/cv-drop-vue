@@ -25,9 +25,9 @@ export default function TalentDashboard() {
   const [filteredDevelopers, setFilteredDevelopers] = useState<DeveloperProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [skillFilter, setSkillFilter] = useState('')
-  const [experienceFilter, setExperienceFilter] = useState('')
-  const [locationFilter, setLocationFilter] = useState('')
+  const [skillFilter, setSkillFilter] = useState('all')
+  const [experienceFilter, setExperienceFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
 
   useEffect(() => {
     fetchDevelopers()
@@ -66,7 +66,7 @@ export default function TalentDashboard() {
     }
 
     // Filter by skills
-    if (skillFilter) {
+    if (skillFilter && skillFilter !== 'all') {
       filtered = filtered.filter(developer =>
         developer.skills?.some(skill => 
           skill.toLowerCase().includes(skillFilter.toLowerCase())
@@ -75,7 +75,7 @@ export default function TalentDashboard() {
     }
 
     // Filter by experience
-    if (experienceFilter) {
+    if (experienceFilter && experienceFilter !== 'all') {
       filtered = filtered.filter(developer => {
         const experience = developer.years_experience || 0
         switch (experienceFilter) {
@@ -89,7 +89,7 @@ export default function TalentDashboard() {
     }
 
     // Filter by location
-    if (locationFilter) {
+    if (locationFilter && locationFilter !== 'all') {
       filtered = filtered.filter(developer =>
         developer.location?.toLowerCase().includes(locationFilter.toLowerCase())
       )
@@ -154,7 +154,7 @@ export default function TalentDashboard() {
                 <SelectValue placeholder="Filtrar por skill" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las skills</SelectItem>
+                <SelectItem value="all">Todas las skills</SelectItem>
                 {getAllSkills().map(skill => (
                   <SelectItem key={skill} value={skill}>
                     {skill}
@@ -168,7 +168,7 @@ export default function TalentDashboard() {
                 <SelectValue placeholder="Experiencia" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toda experiencia</SelectItem>
+                <SelectItem value="all">Toda experiencia</SelectItem>
                 <SelectItem value="0-2">0-2 años</SelectItem>
                 <SelectItem value="3-5">3-5 años</SelectItem>
                 <SelectItem value="6-10">6-10 años</SelectItem>
@@ -181,9 +181,9 @@ export default function TalentDashboard() {
                 <SelectValue placeholder="Ubicación" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las ubicaciones</SelectItem>
+                <SelectItem value="all">Todas las ubicaciones</SelectItem>
                 {getAllLocations().map(location => (
-                  <SelectItem key={location} value={location || ''}>
+                  <SelectItem key={location} value={location}>
                     {location}
                   </SelectItem>
                 ))}
@@ -194,9 +194,9 @@ export default function TalentDashboard() {
               variant="outline" 
               onClick={() => {
                 setSearchTerm('')
-                setSkillFilter('')
-                setExperienceFilter('')
-                setLocationFilter('')
+                setSkillFilter('all')
+                setExperienceFilter('all')
+                setLocationFilter('all')
               }}
             >
               Limpiar Filtros
