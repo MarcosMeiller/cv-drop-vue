@@ -10,28 +10,14 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let mounted = true
-    
-    // First check current session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (!mounted) return
-      
-      if (error) {
-        console.error('Error getting session:', error)
-        setUser(null)
-        setSession(null)
-        setUserProfile(null)
-        setLoading(false)
-        return
-      }
-      
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      
       if (session?.user) {
         fetchUserProfile(session.user.id)
       } else {
-        setUserProfile(null)
+        // Small delay to prevent rapid state changes
         setTimeout(() => setLoading(false), 100)
       }
     })
@@ -39,32 +25,23 @@ export const useAuth = () => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
-      
-      console.log('Auth state change:', event, session ? 'has session' : 'no session')
-      
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      
       if (session?.user) {
-        await fetchUserProfile(session.user.id)
+        fetchUserProfile(session.user.id)
       } else {
         setUserProfile(null)
+        // Small delay to prevent rapid state changes
         setTimeout(() => setLoading(false), 100)
       }
     })
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user:', userId)
-      
       // First get the basic user profile
       const { data: userProfileData, error: userProfileError } = await supabase
         .from('user_profiles')
@@ -72,18 +49,14 @@ export const useAuth = () => {
         .eq('user_id', userId)
         .single()
 
-      if (userProfileError) {
-        if (userProfileError.code === 'PGRST116') {
-          console.log('No user profile found for user:', userId)
-        } else {
-          console.error('Error fetching user profile:', userProfileError)
-        }
+      if (userProfileError && userProfileError.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', userProfileError)
         setLoading(false)
         return
       }
 
       if (!userProfileData) {
-        console.log('No user profile data for user:', userId)
+        console.log('No user profile found for user:', userId)
         setLoading(false)
         return
       }
