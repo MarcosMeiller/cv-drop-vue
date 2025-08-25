@@ -207,12 +207,19 @@ export const ProfileSetup = () => {
       const raw = existingProfile?.cv_url as string
       const path = raw.includes('/storage/v1') ? raw.split('/cvs/')[1] : raw
       if (!path) throw new Error('Invalid CV path')
-      const { data, error } = await supabase.storage.from('cvs').createSignedUrl(path, 60)
-      if (error || !data?.signedUrl) throw error || new Error('No signed URL')
-      window.open(data.signedUrl, '_blank')
+      const { data, error } = await supabase.storage.from('cvs').download(path)
+      if (error || !data) throw error || new Error('No file')
+      const blobUrl = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = path.split('/').pop() || 'cv.pdf'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(blobUrl)
     } catch (e) {
-      console.error('Error creating signed URL:', e)
-      toast({ title: 'Download failed', description: 'Could not create download link.', variant: 'destructive' })
+      console.error('Error downloading CV:', e)
+      toast({ title: 'Download failed', description: 'Could not download CV.', variant: 'destructive' })
     }
   }
 
