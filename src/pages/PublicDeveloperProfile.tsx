@@ -15,9 +15,11 @@ import {
 } from 'lucide-react'
 import { supabase, DeveloperProfilePublic } from '@/lib/supabase'
 import { ImageModal } from '@/components/ui/image-modal'
+import { useToast } from '@/hooks/use-toast'
 
 export default function PublicDeveloperProfile() {
   const { id } = useParams<{ id: string }>()
+  const { toast } = useToast()
   const [developer, setDeveloper] = useState<DeveloperProfilePublic | null>(null)
   const [loading, setLoading] = useState(true)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
@@ -53,6 +55,28 @@ export default function PublicDeveloperProfile() {
       setNotFound(true)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCvDownload = async () => {
+    if (!developer?.cv_url) return
+    try {
+      const raw = developer.cv_url as string
+      const path = raw.includes('/storage/v1') ? raw.split('/cvs/')[1] : raw
+      if (!path) throw new Error('Invalid CV path')
+      const { data, error } = await supabase.storage.from('cvs').download(path)
+      if (error || !data) throw error || new Error('No file')
+      const blobUrl = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = path.split('/').pop() || `${developer.full_name}_CV.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(blobUrl)
+    } catch (e) {
+      console.error('Error downloading CV:', e)
+      toast({ title: 'Download failed', description: 'Could not download CV.', variant: 'destructive' })
     }
   }
 
@@ -229,11 +253,9 @@ export default function PublicDeveloperProfile() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {developer.cv_url && (
-                  <Button variant="outline" className="w-full justify-start" asChild>
-                    <a href={developer.cv_url} target="_blank" rel="noopener noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      View CV
-                    </a>
+                  <Button variant="outline" className="w-full justify-start" onClick={handleCvDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download CV
                   </Button>
                 )}
                 

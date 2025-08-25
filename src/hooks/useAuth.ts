@@ -33,7 +33,13 @@ export const useAuth = () => {
       } else {
         setUserProfile(null)
         // Small delay to prevent rapid state changes
-        setTimeout(() => setLoading(false), 100)
+        setTimeout(() => {
+          setLoading(false)
+          // Redirect to dashboard after successful login
+          if (window.location.pathname === '/login') {
+            window.location.href = '/dashboard'
+          }
+        }, 100)
       }
     })
 
