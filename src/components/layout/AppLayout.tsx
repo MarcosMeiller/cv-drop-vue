@@ -13,10 +13,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
+import { ImageModal } from '@/components/ui/image-modal'
 
 export const AppLayout = () => {
   const { user, userProfile, signOut } = useAuth()
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
 
   return (
     <SidebarProvider>
@@ -40,7 +44,19 @@ export const AppLayout = () => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full">
-                      <Avatar className="h-8 w-8 md:h-10 md:w-10">
+                      <Avatar 
+                        className="h-8 w-8 md:h-10 md:w-10 cursor-pointer" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageUrl = userProfile.role === 'developer' 
+                            ? (userProfile as any).avatar_url 
+                            : (userProfile as any).logo_url;
+                          if (imageUrl) {
+                            setSelectedImageUrl(imageUrl);
+                            setIsImageModalOpen(true);
+                          }
+                        }}
+                      >
                         <AvatarImage src={userProfile.role === 'developer' ? (userProfile as any).avatar_url : (userProfile as any).logo_url} />
                         <AvatarFallback className="text-xs md:text-sm">
                           {userProfile.role === 'developer' 
@@ -52,14 +68,29 @@ export const AppLayout = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {userProfile.role === 'developer' 
+                            ? (userProfile as any).full_name || 'Developer'
+                            : (userProfile as any).company_name || 'Company'
+                          }
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => window.location.href = '/dashboard'}>
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.location.href = userProfile.role === 'developer' ? '/developer/profile' : '/company/profile'}>
+                      Profile Settings
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
+                    <DropdownMenuItem onClick={signOut}>
+                      Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -73,6 +104,13 @@ export const AppLayout = () => {
           </main>
         </div>
       </div>
+      
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={selectedImageUrl || ''}
+        altText="Profile Image"
+      />
     </SidebarProvider>
   )
 }

@@ -36,17 +36,17 @@ export const AppSidebar = () => {
   const developerItems = [
     { title: 'Dashboard', url: '/dashboard', icon: Home },
     { title: 'My Profile', url: '/developer/profile', icon: User },
-    { title: 'Browse Companies', url: '/companies', icon: Building2 },
+    { title: 'List Companies', url: '/companies', icon: Building2 },
   ]
 
   const companyItems = [
     { title: 'Dashboard', url: '/dashboard', icon: Home },
     { title: 'Company Profile', url: '/company/profile', icon: Building2 },
-    { title: 'Browse Developers', url: '/developers', icon: Users },
+    { title: 'List Developers', url: '/developers', icon: Users },
   ]
 
   const publicItems = [
-    { title: 'Browse Developers', url: '/public/developers', icon: Search },
+    { title: 'List Developers', url: '/public/developers', icon: Search },
   ]
 
   const items = userProfile?.role === 'developer' ? developerItems : 

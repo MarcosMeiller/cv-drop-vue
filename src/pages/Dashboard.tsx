@@ -153,7 +153,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Browse {isDeveloper ? 'Companies' : 'Developers'}
+              List {isDeveloper ? 'Companies' : 'Developers'}
             </CardTitle>
             <CardDescription>
               Discover {isDeveloper ? 'potential employers' : 'talented developers'}
@@ -163,7 +163,7 @@ export default function Dashboard() {
             <Button asChild className="w-full justify-start">
               <Link to={isDeveloper ? '/companies' : '/developers'}>
                 <Eye className="mr-2 h-4 w-4" />
-                Browse {isDeveloper ? 'Companies' : 'Developers'}
+                List {isDeveloper ? 'Companies' : 'Developers'}
               </Link>
             </Button>
             

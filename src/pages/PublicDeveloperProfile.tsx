@@ -1,25 +1,26 @@
 import { useState, useEffect } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
-  MapPin, 
-  Calendar, 
+  ArrowLeft, 
   Github, 
   Linkedin, 
+  MapPin, 
+  Calendar, 
   Download,
-  Mail,
-  ArrowLeft
+  Mail
 } from 'lucide-react'
 import { supabase, DeveloperProfilePublic } from '@/lib/supabase'
-import { Link } from 'react-router-dom'
+import { ImageModal } from '@/components/ui/image-modal'
 
 export default function PublicDeveloperProfile() {
   const { id } = useParams<{ id: string }>()
   const [developer, setDeveloper] = useState<DeveloperProfilePublic | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function PublicDeveloperProfile() {
       <Card className="shadow-card border-0">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <Avatar className="h-24 w-24">
+            <Avatar className="h-24 w-24 cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
               <AvatarImage src={developer.avatar_url} />
               <AvatarFallback className="text-2xl">
                 {developer.full_name?.charAt(0) || 'D'}
@@ -258,6 +259,11 @@ export default function PublicDeveloperProfile() {
           )}
         </div>
       </div>
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={developer?.avatar_url || ''}
+      />
     </div>
   )
 }

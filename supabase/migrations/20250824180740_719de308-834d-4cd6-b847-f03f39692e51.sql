@@ -25,6 +25,24 @@ CREATE TABLE public.pdf_documents (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- Create a public view for company profiles without sensitive information
+CREATE OR REPLACE VIEW public.company_profiles_public AS
+SELECT 
+    id,
+    company_name,
+    sector,
+    description,
+    logo_url,
+    website_url,
+    location,
+    company_size,
+    created_at,
+    updated_at
+FROM public.company_profiles;
+
+-- Grant access to the public view
+GRANT SELECT ON public.company_profiles_public TO anon, authenticated;
+
 -- Enable Row Level Security
 ALTER TABLE public.profile_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pdf_documents ENABLE ROW LEVEL SECURITY;

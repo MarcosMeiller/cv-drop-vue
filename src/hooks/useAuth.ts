@@ -17,7 +17,8 @@ export const useAuth = () => {
       if (session?.user) {
         fetchUserProfile(session.user.id)
       } else {
-        setLoading(false)
+        // Small delay to prevent rapid state changes
+        setTimeout(() => setLoading(false), 100)
       }
     })
 
@@ -31,7 +32,8 @@ export const useAuth = () => {
         fetchUserProfile(session.user.id)
       } else {
         setUserProfile(null)
-        setLoading(false)
+        // Small delay to prevent rapid state changes
+        setTimeout(() => setLoading(false), 100)
       }
     })
 
@@ -40,17 +42,61 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // First get the basic user profile
+      const { data: userProfileData, error: userProfileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching user profile:', error)
-      } else if (data) {
-        setUserProfile(data as UserProfile)
+      if (userProfileError && userProfileError.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', userProfileError)
+        setLoading(false)
+        return
       }
+
+      if (!userProfileData) {
+        console.log('No user profile found for user:', userId)
+        setLoading(false)
+        return
+      }
+
+      // Then get the specific profile based on role
+      let specificProfileData = null
+      if (userProfileData.role === 'developer') {
+        const { data, error } = await supabase
+          .from('developer_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching developer profile:', error)
+        } else {
+          specificProfileData = data
+        }
+      } else if (userProfileData.role === 'company') {
+        const { data, error } = await supabase
+          .from('company_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching company profile:', error)
+        } else {
+          specificProfileData = data
+        }
+      }
+
+      // Combine the profiles
+      const completeProfile = {
+        ...userProfileData,
+        ...specificProfileData
+      }
+
+      console.log('Profile fetched successfully:', completeProfile)
+      setUserProfile(completeProfile as UserProfile)
     } catch (error) {
       console.error('Error fetching user profile:', error)
     } finally {
@@ -62,6 +108,12 @@ export const useAuth = () => {
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('Error signing out:', error)
+    }
+  }
+
+  const refreshUserProfile = async () => {
+    if (user) {
+      await fetchUserProfile(user.id)
     }
   }
 
@@ -160,5 +212,6 @@ export const useAuth = () => {
     loading,
     signOut,
     createUserProfile,
+    refreshUserProfile,
   }
 }

@@ -19,6 +19,7 @@ import {
 import { supabase, DeveloperProfilePublic } from '@/lib/supabase'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Link } from 'react-router-dom'
+import { ImageModal } from '@/components/ui/image-modal'
 
 export default function TalentDashboard() {
   const [developers, setDevelopers] = useState<DeveloperProfilePublic[]>([])
@@ -28,6 +29,8 @@ export default function TalentDashboard() {
   const [skillFilter, setSkillFilter] = useState('all')
   const [experienceFilter, setExperienceFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
     fetchDevelopers()
@@ -219,7 +222,12 @@ export default function TalentDashboard() {
             <Card key={developer.id} className="shadow-card border-0 hover:shadow-glow transition-shadow">
               <CardHeader className="pb-3 md:pb-4">
                 <div className="flex items-start gap-3 md:gap-4">
-                  <Avatar className="h-12 w-12 md:h-16 md:w-16 flex-shrink-0">
+                  <Avatar className="h-12 w-12 md:h-16 md:w-16 flex-shrink-0 cursor-pointer" onClick={() => {
+                    if (developer.avatar_url) {
+                      setSelectedImageUrl(developer.avatar_url);
+                      setIsImageModalOpen(true);
+                    }
+                  }}>
                     <AvatarImage src={developer.avatar_url} />
                     <AvatarFallback className="text-sm md:text-lg">
                       {developer.full_name?.charAt(0) || 'D'}
@@ -319,6 +327,11 @@ export default function TalentDashboard() {
           </Card>
         )}
       </div>
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={selectedImageUrl}
+      />
     </div>
   )
 }

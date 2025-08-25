@@ -5,6 +5,11 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://oezzbogfodhijbwrvapa.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lenpib2dmb2RoaWpid3J2YXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4Mjg0ODQsImV4cCI6MjA3MTQwNDQ4NH0.tkWhr9psVtC8GjpImXF9sOawofm67lOhtEd3ck9MsoI";
 
+console.log('Initializing Supabase client with:', { 
+  url: SUPABASE_URL, 
+  key: SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) + '...' 
+});
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -13,5 +18,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+  },
+  db: {
+    schema: 'public'
   }
+});
+
+// Test the connection
+supabase.auth.getSession().then(({ data, error }) => {
+  console.log('Supabase client initialized:', { 
+    hasSession: !!data.session, 
+    error: error?.message 
+  });
 });

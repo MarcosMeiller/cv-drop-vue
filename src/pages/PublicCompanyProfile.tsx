@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
-  MapPin, 
+  ArrowLeft, 
   Building2, 
   Globe, 
+  MapPin, 
+  Users, 
   Mail,
-  Users,
-  ArrowLeft
+  ExternalLink
 } from 'lucide-react'
 import { supabase, CompanyProfile } from '@/lib/supabase'
-import { Link } from 'react-router-dom'
+import { ImageModal } from '@/components/ui/image-modal'
 
 export default function PublicCompanyProfile() {
   const { id } = useParams<{ id: string }>()
   const [company, setCompany] = useState<CompanyProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -81,7 +84,7 @@ export default function PublicCompanyProfile() {
       <Card className="shadow-card border-0">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <Avatar className="h-24 w-24">
+            <Avatar className="h-24 w-24 cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
               <AvatarImage src={company.logo_url} />
               <AvatarFallback className="text-2xl">
                 <Building2 className="h-8 w-8" />
@@ -297,6 +300,11 @@ export default function PublicCompanyProfile() {
           </Card>
         </div>
       </div>
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={company.logo_url}
+      />
     </div>
   )
 }

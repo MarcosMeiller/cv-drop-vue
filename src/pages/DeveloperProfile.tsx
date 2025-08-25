@@ -10,10 +10,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FileUpload } from '@/components/ui/file-upload'
-import { X, Plus, Upload, Download, Github, Linkedin, MapPin, Calendar } from 'lucide-react'
+import { X, Plus, Upload, Download, Github, Linkedin, MapPin, Calendar, Trash2, FileText } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { ImageModal } from '@/components/ui/image-modal'
 
 const schema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -26,7 +27,7 @@ const schema = z.object({
 })
 
 export default function DeveloperProfile() {
-  const { userProfile, user } = useAuth()
+  const { userProfile, user, refreshUserProfile } = useAuth()
   const { toast } = useToast()
   const [skills, setSkills] = useState<string[]>([])
   const [newSkill, setNewSkill] = useState('')
@@ -36,6 +37,8 @@ export default function DeveloperProfile() {
   const [cvProgress, setCvProgress] = useState(0)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -191,6 +194,7 @@ export default function DeveloperProfile() {
         title: 'Avatar uploaded successfully!',
         description: 'Your profile picture has been updated.',
       })
+      refreshUserProfile() // Refresh user profile after successful upload
     } catch (error) {
       console.error('Error uploading avatar:', error)
       toast({
@@ -248,6 +252,49 @@ export default function DeveloperProfile() {
 
   const profile = userProfile as any
 
+  const handleCvDelete = async () => {
+    if (!user) return
+
+    try {
+      const fileName = profile.cv_url.split('/').pop()
+      if (!fileName) {
+        toast({
+          title: 'Error deleting CV',
+          description: 'Could not determine file name from URL.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const { error: storageError } = await supabase.storage
+        .from('cvs')
+        .remove([fileName])
+
+      if (storageError) throw storageError
+
+      const { error: dbError } = await supabase
+        .from('pdf_documents')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('file_path', fileName)
+
+      if (dbError) throw dbError
+
+      toast({
+        title: 'CV deleted successfully!',
+        description: 'Your CV has been removed from your profile.',
+      })
+      refreshUserProfile()
+    } catch (error) {
+      console.error('Error deleting CV:', error)
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete CV. Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="space-y-2">
@@ -268,7 +315,10 @@ export default function DeveloperProfile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
-                <Avatar className="h-24 w-24">
+                <Avatar className="h-24 w-24 cursor-pointer" onClick={() => {
+                  setSelectedImageUrl(profile.avatar_url);
+                  setIsImageModalOpen(true);
+                }}>
                   <AvatarImage src={profile.avatar_url} />
                   <AvatarFallback className="text-lg">
                     {profile.full_name?.charAt(0) || user?.email?.charAt(0)}
@@ -289,32 +339,57 @@ export default function DeveloperProfile() {
           {/* CV Upload */}
           <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg">CV Document</CardTitle>
-              <CardDescription>Upload your CV in PDF format</CardDescription>
+              <CardTitle className="text-lg">CV / Resume</CardTitle>
+              <CardDescription>Upload your CV or resume</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {profile.cv_url ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-8 w-8 text-primary" />
+                      <div>
+                        <p className="font-medium">Current CV</p>
+                        <p className="text-sm text-muted-foreground">Click to download</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(profile.cv_url, '_blank')}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCvFile(null)}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Update
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleCvDelete}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              
               <FileUpload
                 onFileSelect={handleCvUpload}
-                accept={{ 'application/pdf': ['.pdf'] }}
+                accept={{ 'application/pdf': ['.pdf'], 'application/msword': ['.doc'], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] }}
                 maxSize={10 * 1024 * 1024} // 10MB
                 isUploading={cvUploading}
-                uploadProgress={cvProgress}
-                uploadedFile={profile.cv_url ? { name: 'CV.pdf', url: profile.cv_url } : null}
-                onRemoveFile={() => {
-                  // Handle CV removal if needed
-                }}
+                className="text-center"
               />
-              
-              {profile.cv_url && (
-                <div className="mt-4">
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <a href={profile.cv_url} target="_blank" rel="noopener noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Current CV
-                    </a>
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -492,6 +567,12 @@ export default function DeveloperProfile() {
           </Card>
         </div>
       </div>
+
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={selectedImageUrl || ''}
+      />
     </div>
   )
 }

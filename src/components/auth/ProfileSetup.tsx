@@ -8,11 +8,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { X, Plus, Code2, Building2, Upload, FileText, Edit, Eye } from 'lucide-react'
+import { X, Plus, Code2, Building2, Upload, FileText, Edit, Eye, Download } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { DeveloperProfile, CompanyProfile, UserRole, supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import TalentDashboard from '@/components/dashboards/TalentDashboard'
+import { FileUpload } from '@/components/ui/file-upload'
 
 const developerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -37,16 +38,14 @@ const companySchema = z.object({
 })
 
 export const ProfileSetup = () => {
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
-  const [skills, setSkills] = useState<string[]>([])
-  const [newSkill, setNewSkill] = useState('')
+  const [selectedRole, setSelectedRole] = useState<UserRole>('developer')
   const [loading, setLoading] = useState(false)
+  const [existingProfile, setExistingProfile] = useState<any>(null)
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [cvUploading, setCvUploading] = useState(false)
-  const [existingProfile, setExistingProfile] = useState<DeveloperProfile | CompanyProfile | null>(null)
-  const [showEditForm, setShowEditForm] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const { user, createUserProfile } = useAuth()
+  const [skills, setSkills] = useState<string[]>([])
+  const [newSkill, setNewSkill] = useState('')
+  const { user, refreshUserProfile } = useAuth()
   const { toast } = useToast()
 
   const developerForm = useForm<z.infer<typeof developerSchema>>({
@@ -83,7 +82,7 @@ export const ProfileSetup = () => {
     
     // Set initial loading to false after a short delay for better UX
     const timer = setTimeout(() => {
-      setInitialLoading(false)
+      // setInitialLoading(false) // This state was removed, so this line is removed.
     }, 1000)
     
     return () => clearTimeout(timer)
@@ -192,6 +191,7 @@ export const ProfileSetup = () => {
       }
 
       setCvFile(null)
+      refreshUserProfile() // Refresh user profile to update the profile in the auth context
     } catch (error) {
       console.error('Error uploading CV:', error)
       toast({
@@ -233,18 +233,28 @@ export const ProfileSetup = () => {
           description: 'Tus cambios han sido guardados.',
         })
         setExistingProfile({ ...existingProfile, ...values, skills })
-        setShowEditForm(false)
+        // setShowEditForm(false) // This state was removed, so this line is removed.
       } else {
         // Create new profile
-        await createUserProfile(selectedRole, {
-          ...values,
-          full_name: `${values.firstName} ${values.lastName}`,
-          skills,
-        })
+        await supabase
+          .from('developer_profiles')
+          .insert({
+            user_id: user?.id,
+            full_name: `${values.firstName} ${values.lastName}`,
+            email: values.email,
+            bio: values.bio,
+            github_url: values.github_url,
+            linkedin_url: values.linkedin_url,
+            years_experience: values.years_experience,
+            location: values.location,
+            skills,
+          })
+
         toast({
           title: 'Perfil creado exitosamente!',
           description: 'Bienvenido a Mini Talento Tech Platform.',
         })
+        refreshUserProfile() // Refresh user profile to update the profile in the auth context
       }
     } catch (error) {
       console.error('Error with profile:', error)
@@ -280,14 +290,28 @@ export const ProfileSetup = () => {
           description: 'Tus cambios han sido guardados.',
         })
         setExistingProfile({ ...existingProfile, ...values })
-        setShowEditForm(false)
+        // setShowEditForm(false) // This state was removed, so this line is removed.
       } else {
         // Create new profile
-        await createUserProfile(selectedRole, values)
+        await supabase
+          .from('company_profiles')
+          .insert({
+            user_id: user?.id,
+            company_name: values.company_name,
+            email: values.email,
+            sector: values.sector,
+            description: values.description,
+            contact_email: values.contact_email,
+            website_url: values.website_url,
+            location: values.location,
+            company_size: values.company_size,
+          })
+
         toast({
           title: 'Perfil creado exitosamente!',
           description: 'Bienvenido a Mini Talento Tech Platform.',
         })
+        refreshUserProfile() // Refresh user profile to update the profile in the auth context
       }
     } catch (error) {
       console.error('Error with profile:', error)
@@ -302,15 +326,15 @@ export const ProfileSetup = () => {
   }
 
   // Show initial loading state
-  if (initialLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
         <Card className="w-full max-w-sm md:max-w-md shadow-card border-0">
           <CardContent className="p-8 text-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <div className="space-y-2">
-              <h2 className="text-xl font-semibold">Setting up your profile...</h2>
-              <p className="text-sm text-muted-foreground">Please wait while we prepare everything for you.</p>
+              <h2 className="text-xl font-semibold">Loading...</h2>
+              <p className="text-sm text-muted-foreground">Please wait while we load your profile.</p>
             </div>
           </CardContent>
         </Card>
@@ -319,7 +343,7 @@ export const ProfileSetup = () => {
   }
 
   // Show talent dashboard for companies with existing profiles
-  if (selectedRole === 'company' && existingProfile && !showEditForm) {
+  if (selectedRole === 'company' && existingProfile && !existingProfile.cv_url) { // Added check for cv_url
     return <TalentDashboard />
   }
 
@@ -341,7 +365,7 @@ export const ProfileSetup = () => {
   }
 
   // Show existing profile for developers
-  if (selectedRole === 'developer' && existingProfile && !showEditForm) {
+  if (selectedRole === 'developer' && existingProfile && !existingProfile.cv_url) { // Added check for cv_url
     const devProfile = existingProfile as DeveloperProfile
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
@@ -349,7 +373,10 @@ export const ProfileSetup = () => {
           <CardHeader className="pb-4">
             <CardTitle className="text-lg md:text-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               Tu Perfil de Developer
-              <Button onClick={() => setShowEditForm(true)} variant="outline" size="sm">
+              <Button onClick={() => {
+                // setShowEditForm(true) // This state was removed, so this line is removed.
+                setSelectedRole('developer') // Reset to developer form
+              }} variant="outline" size="sm">
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </Button>
@@ -408,90 +435,54 @@ export const ProfileSetup = () => {
               </div>
             )}
 
-            <div className="space-y-4">
-              <h3 className="font-semibold">Curriculum Vitae</h3>
-              {devProfile.cv_url ? (
-                <div className="flex items-center gap-4">
-                  <Button variant="outline" asChild>
-                    <a href={devProfile.cv_url} target="_blank" rel="noopener noreferrer">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver CV actual
-                    </a>
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          setCvFile(file)
-                        }
-                      }}
-                      className="hidden"
-                      id="cv-upload"
-                    />
-                    <label htmlFor="cv-upload">
-                      <Button variant="outline" asChild>
-                        <span className="cursor-pointer">
+            {/* CV Upload Section */}
+            <Card className="shadow-card border-0">
+              <CardHeader>
+                <CardTitle className="text-lg">CV / Resume</CardTitle>
+                <CardDescription>Upload your CV or resume to complete your profile</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {existingProfile?.cv_url ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="font-medium">Current CV</p>
+                          <p className="text-sm text-muted-foreground">Click to download</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(existingProfile.cv_url, '_blank')}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCvFile(null)}
+                        >
                           <Upload className="h-4 w-4 mr-2" />
-                          Actualizar CV
-                        </span>
-                      </Button>
-                    </label>
+                          Update
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
-                  <div className="text-center space-y-2">
-                    <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">No has subido tu CV aún</p>
-                    <Input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          setCvFile(file)
-                        }
-                      }}
-                      className="hidden"
-                      id="cv-upload"
-                    />
-                    <label htmlFor="cv-upload">
-                      <Button variant="outline" asChild>
-                        <span className="cursor-pointer">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Subir CV
-                        </span>
-                      </Button>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {cvFile && (
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <p className="text-sm font-medium mb-2">Archivo seleccionado: {cvFile.name}</p>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => handleCvUpload(cvFile)}
-                      disabled={cvUploading}
-                      size="sm"
-                    >
-                      {cvUploading ? 'Subiendo...' : 'Confirmar subida'}
-                    </Button>
-                    <Button 
-                      onClick={() => setCvFile(null)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+                ) : null}
+                
+                <FileUpload
+                  onFileSelect={handleCvUpload}
+                  accept={{ 'application/pdf': ['.pdf'], 'application/msword': ['.doc'], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] }}
+                  maxSize={10 * 1024 * 1024} // 10MB
+                  isUploading={cvUploading}
+                  className="text-center"
+                />
+              </CardContent>
+            </Card>
 
             <Button
               onClick={() => setSelectedRole(null)}
@@ -718,7 +709,8 @@ export const ProfileSetup = () => {
                     variant="outline"
                     onClick={() => {
                       if (existingProfile) {
-                        setShowEditForm(false)
+                        // setShowEditForm(false) // This state was removed, so this line is removed.
+                        setSelectedRole('developer') // Reset to developer form
                       } else {
                         setSelectedRole(null)
                       }
@@ -812,7 +804,8 @@ export const ProfileSetup = () => {
                     variant="outline"
                     onClick={() => {
                       if (existingProfile) {
-                        setShowEditForm(false)
+                        // setShowEditForm(false) // This state was removed, so this line is removed.
+                        setSelectedRole('company') // Reset to company form
                       } else {
                         setSelectedRole(null)
                       }

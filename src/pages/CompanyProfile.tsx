@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FileUpload } from '@/components/ui/file-upload'
-import { Building2, Globe, Mail, MapPin, Users } from 'lucide-react'
+import { Building2, Globe, Mail, MapPin, Users, Upload, Download, Trash2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { ImageModal } from '@/components/ui/image-modal'
 
 const schema = z.object({
   company_name: z.string().min(2, 'Company name must be at least 2 characters'),
@@ -26,11 +27,12 @@ const schema = z.object({
 })
 
 export default function CompanyProfile() {
-  const { userProfile, user } = useAuth()
+  const { userProfile, user, refreshUserProfile } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -113,6 +115,7 @@ export default function CompanyProfile() {
         title: 'Logo uploaded successfully!',
         description: 'Your company logo has been updated.',
       })
+      refreshUserProfile()
     } catch (error) {
       console.error('Error uploading logo:', error)
       toast({
@@ -188,7 +191,7 @@ export default function CompanyProfile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
-                <Avatar className="h-24 w-24">
+                <Avatar className="h-24 w-24 cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
                   <AvatarImage src={profile.logo_url} />
                   <AvatarFallback className="text-lg">
                     <Building2 className="h-8 w-8" />
@@ -366,6 +369,12 @@ export default function CompanyProfile() {
           </Card>
         </div>
       </div>
+
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={profile.logo_url}
+      />
     </div>
   )
 }
