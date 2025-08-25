@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { ProfileSetup } from './ProfileSetup'
 import { useAuth } from '@/hooks/useAuth'
 import { Code2, Building2 } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,7 @@ export const AuthPage = () => {
   const { theme } = useTheme()
   const { user, userProfile } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [authMode, setAuthMode] = useState<'sign_in' | 'sign_up' | 'update_password'>('sign_in')
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
@@ -60,6 +61,16 @@ export const AuthPage = () => {
       window.location.search.includes('type=recovery')
     if (isRecovery) setAuthMode('update_password')
   }, [location])
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        // Redirect only after explicit sign-in
+        navigate('/dashboard', { replace: true })
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [navigate])
 
   const handleRegistration = async (values: z.infer<typeof registrationSchema>) => {
     setRegistrationLoading(true)

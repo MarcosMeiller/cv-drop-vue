@@ -156,11 +156,9 @@ export default function PublicDeveloperProfile() {
                 )}
                 
                 {developer.cv_url && (
-                  <Button size="sm">
-                    <a href={developer.cv_url} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download CV
-                    </a>
+                  <Button size="sm" onClick={handleCvDownload} className="flex items-center">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download CV
                   </Button>
                 )}
               </div>

@@ -35,10 +35,6 @@ export const useAuth = () => {
         // Small delay to prevent rapid state changes
         setTimeout(() => {
           setLoading(false)
-          // Redirect to dashboard after successful login
-          if (window.location.pathname === '/login') {
-            window.location.href = '/dashboard'
-          }
         }, 100)
       }
     })
