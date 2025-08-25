@@ -168,14 +168,12 @@ export const ProfileSetup = () => {
 
       if (uploadError) throw uploadError
 
-      const { data } = supabase.storage
-        .from('cvs')
-        .getPublicUrl(fileName)
+      // No public URL for private bucket; store the path and use signed URLs on demand
 
-      // Update developer profile with CV URL
+      // Update developer profile with CV path
       const { error: updateError } = await supabase
         .from('developer_profiles')
-        .update({ cv_url: data.publicUrl })
+        .update({ cv_url: fileName })
         .eq('user_id', user.id)
 
       if (updateError) throw updateError
@@ -187,7 +185,7 @@ export const ProfileSetup = () => {
 
       // Update existing profile state
       if (existingProfile) {
-        setExistingProfile({ ...existingProfile, cv_url: data.publicUrl })
+        setExistingProfile({ ...existingProfile, cv_url: fileName })
       }
 
       setCvFile(null)
@@ -201,6 +199,20 @@ export const ProfileSetup = () => {
       })
     } finally {
       setCvUploading(false)
+    }
+  }
+
+  const handleCvDownload = async () => {
+    try {
+      const raw = existingProfile?.cv_url as string
+      const path = raw.includes('/storage/v1') ? raw.split('/cvs/')[1] : raw
+      if (!path) throw new Error('Invalid CV path')
+      const { data, error } = await supabase.storage.from('cvs').createSignedUrl(path, 60)
+      if (error || !data?.signedUrl) throw error || new Error('No signed URL')
+      window.open(data.signedUrl, '_blank')
+    } catch (e) {
+      console.error('Error creating signed URL:', e)
+      toast({ title: 'Download failed', description: 'Could not create download link.', variant: 'destructive' })
     }
   }
 
@@ -456,7 +468,7 @@ export const ProfileSetup = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(existingProfile.cv_url, '_blank')}
+                          onClick={handleCvDownload}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download

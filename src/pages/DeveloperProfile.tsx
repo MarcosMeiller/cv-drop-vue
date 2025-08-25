@@ -112,9 +112,7 @@ export default function DeveloperProfile() {
       clearInterval(progressInterval)
       setCvProgress(100)
 
-      const { data } = supabase.storage
-        .from('cvs')
-        .getPublicUrl(fileName)
+      // No public URL for private bucket; store the path and use signed URLs on demand
 
       // Track file in database
       const { error: dbError } = await supabase
@@ -133,7 +131,7 @@ export default function DeveloperProfile() {
       // Update profile with CV URL
       const { error } = await supabase
         .from('developer_profiles')
-        .update({ cv_url: data.publicUrl })
+        .update({ cv_url: fileName })
         .eq('user_id', user.id)
 
       if (error) throw error
@@ -256,11 +254,12 @@ export default function DeveloperProfile() {
     if (!user) return
 
     try {
-      const fileName = profile.cv_url.split('/').pop()
-      if (!fileName) {
+      const raw = profile.cv_url as string
+      const filePath = raw.includes('/storage/v1') ? raw.split('/cvs/')[1] : raw
+      if (!filePath) {
         toast({
           title: 'Error deleting CV',
-          description: 'Could not determine file name from URL.',
+          description: 'Could not determine file path.',
           variant: 'destructive',
         })
         return
@@ -268,7 +267,7 @@ export default function DeveloperProfile() {
 
       const { error: storageError } = await supabase.storage
         .from('cvs')
-        .remove([fileName])
+        .remove([filePath])
 
       if (storageError) throw storageError
 
@@ -276,7 +275,7 @@ export default function DeveloperProfile() {
         .from('pdf_documents')
         .delete()
         .eq('user_id', user.id)
-        .eq('file_path', fileName)
+        .eq('file_path', filePath)
 
       if (dbError) throw dbError
 
@@ -292,6 +291,20 @@ export default function DeveloperProfile() {
         description: 'Failed to delete CV. Please try again.',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleCvDownload = async () => {
+    try {
+      const raw = profile.cv_url as string
+      const path = raw.includes('/storage/v1') ? raw.split('/cvs/')[1] : raw
+      if (!path) throw new Error('Invalid CV path')
+      const { data, error } = await supabase.storage.from('cvs').createSignedUrl(path, 60)
+      if (error || !data?.signedUrl) throw error || new Error('No signed URL')
+      window.open(data.signedUrl, '_blank')
+    } catch (e) {
+      console.error('Error creating signed URL:', e)
+      toast({ title: 'Download failed', description: 'Could not create download link.', variant: 'destructive' })
     }
   }
 
@@ -357,7 +370,7 @@ export default function DeveloperProfile() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.open(profile.cv_url, '_blank')}
+                        onClick={handleCvDownload}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download
