@@ -50,6 +50,9 @@ const AppRoutes = () => {
           <Route path="developer/:id" element={<PublicDeveloperProfile />} />
           <Route path="company/:id" element={<PublicCompanyProfile />} />
           <Route path="public/developers" element={<ListDevelopers />} />
+
+          {/* 🚀 Fix: si intenta entrar a login estando logueado → redirige al dashboard */}
+          <Route path="login" element={<Navigate to="/dashboard" replace />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

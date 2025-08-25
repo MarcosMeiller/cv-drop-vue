@@ -190,6 +190,7 @@ export const AuthPage = () => {
           <CardContent>
             {authMode === 'sign_in' ? (
               <Auth
+                providers={[]}
                 supabaseClient={supabase}
                 appearance={{
                   theme: ThemeSupa,
@@ -208,9 +209,7 @@ export const AuthPage = () => {
                   },
                 }}
                 view="sign_in"
-                providers={['google']}
                 redirectTo={window.location.origin}
-                onlyThirdPartyProviders={false}
               />
             ) : registrationSuccess ? (
               <div className="text-center space-y-4 py-8">
