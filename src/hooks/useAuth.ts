@@ -10,14 +10,28 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let mounted = true
+    
+    // First check current session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return
+      
+      if (error) {
+        console.error('Error getting session:', error)
+        setUser(null)
+        setSession(null)
+        setUserProfile(null)
+        setLoading(false)
+        return
+      }
+      
       setSession(session)
       setUser(session?.user ?? null)
+      
       if (session?.user) {
         fetchUserProfile(session.user.id)
       } else {
-        // Small delay to prevent rapid state changes
+        setUserProfile(null)
         setTimeout(() => setLoading(false), 100)
       }
     })
@@ -25,25 +39,32 @@ export const useAuth = () => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+      
+      console.log('Auth state change:', event, session ? 'has session' : 'no session')
+      
       setSession(session)
       setUser(session?.user ?? null)
+      
       if (session?.user) {
-        fetchUserProfile(session.user.id)
+        await fetchUserProfile(session.user.id)
       } else {
         setUserProfile(null)
-        // Small delay to prevent rapid state changes
-        setTimeout(() => {
-          setLoading(false)
-        }, 100)
+        setTimeout(() => setLoading(false), 100)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId)
+      
       // First get the basic user profile
       const { data: userProfileData, error: userProfileError } = await supabase
         .from('user_profiles')
@@ -51,14 +72,18 @@ export const useAuth = () => {
         .eq('user_id', userId)
         .single()
 
-      if (userProfileError && userProfileError.code !== 'PGRST116') {
-        console.error('Error fetching user profile:', userProfileError)
+      if (userProfileError) {
+        if (userProfileError.code === 'PGRST116') {
+          console.log('No user profile found for user:', userId)
+        } else {
+          console.error('Error fetching user profile:', userProfileError)
+        }
         setLoading(false)
         return
       }
 
       if (!userProfileData) {
-        console.log('No user profile found for user:', userId)
+        console.log('No user profile data for user:', userId)
         setLoading(false)
         return
       }
@@ -107,9 +132,24 @@ export const useAuth = () => {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Error signing out:', error)
+    try {
+      // First clear local state immediately
+      setUser(null)
+      setSession(null)
+      setUserProfile(null)
+      
+      // Then try to sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      if (error && error.message !== 'Auth session missing!') {
+        console.error('Error signing out:', error)
+      }
+      
+      // Redirect to login regardless of Supabase response
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Error during signout:', error)
+      // Still redirect to login even if signout fails
+      window.location.href = '/login'
     }
   }
 
